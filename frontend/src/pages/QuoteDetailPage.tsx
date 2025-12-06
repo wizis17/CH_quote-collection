@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getQuoteById, updateQuote, deleteQuote, type Quote } from '../services/quoteService';
-import { ArrowLeft, Edit2, Trash2, Save, X } from 'lucide-react';
+import { getQuoteById, updateQuote, deleteQuote, getQuotes, type Quote } from '../services/quoteService';
+import { ArrowLeft, Edit2, Trash2, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../supabase';
 
 export const QuoteDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [allQuotes, setAllQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -18,10 +19,23 @@ export const QuoteDetailPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    fetchAllQuotes();
+  }, []);
+
+  useEffect(() => {
     if (id) {
       fetchQuote(id);
     }
   }, [id]);
+
+  const fetchAllQuotes = async () => {
+    try {
+      const quotesData = await getQuotes();
+      setAllQuotes(quotesData);
+    } catch (err) {
+      console.error('Error fetching all quotes:', err);
+    }
+  };
 
   const fetchQuote = async (quoteId: string) => {
     try {
@@ -163,6 +177,30 @@ export const QuoteDetailPage: React.FC = () => {
     }
   };
 
+  const getCurrentIndex = () => {
+    return allQuotes.findIndex(q => q.id === id);
+  };
+
+  const handlePrevious = () => {
+    const currentIndex = getCurrentIndex();
+    if (currentIndex > 0) {
+      const previousQuote = allQuotes[currentIndex - 1];
+      if (previousQuote.id) {
+        navigate(`/quote/${previousQuote.id}`);
+      }
+    }
+  };
+
+  const handleNext = () => {
+    const currentIndex = getCurrentIndex();
+    if (currentIndex < allQuotes.length - 1) {
+      const nextQuote = allQuotes[currentIndex + 1];
+      if (nextQuote.id) {
+        navigate(`/quote/${nextQuote.id}`);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#1b1b1b] text-white pt-24 px-6">
@@ -199,7 +237,29 @@ export const QuoteDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#1b1b1b] text-white pt-24 px-6 pb-12">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto relative">
+        {/* Navigation Buttons - Outside container */}
+        {allQuotes.length > 1 && (
+          <>
+            <button
+              onClick={handlePrevious}
+              disabled={getCurrentIndex() === 0}
+              className="fixed left-4 top-1/2 -translate-y-1/2 z-50 bg-black/50 text-white p-3 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Previous quote"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={getCurrentIndex() === allQuotes.length - 1}
+              className="fixed right-4 top-1/2 -translate-y-1/2 z-50 bg-black/50 text-white p-3 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Next quote"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </>
+        )}
+
         {/* Header with Back and Action Buttons */}
         <div className="flex justify-between items-center mb-8">
           <button
